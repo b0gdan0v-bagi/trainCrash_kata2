@@ -21,6 +21,18 @@ struct Map
 	Map();
 };
 
+struct Station
+{
+	Pos pos;
+	int roadPlace;
+	//clockwise and anti clock wise;
+	Station(int X, int Y, int R)
+		:pos(Pos(X, Y)), roadPlace(R) {}
+	Station(Pos p, int R)
+		:pos(p), roadPlace(R) {}
+	Station();
+};
+
 Pos getPosByLink(int n, Pos p)
 {
 	switch (n)
@@ -40,6 +52,33 @@ Pos getPosByLink(int n, Pos p)
 	}
 	return p;
 }
+
+struct Train
+{
+	std::vector<Pos> carriagePos;
+	int roadPos, length;
+	char type;
+	bool express = { false };
+	bool clockWise;
+	Train(int ROAD_POS, std::string NAME) :roadPos(ROAD_POS)
+	{
+		//std::cout << NAME.size() << " = size\n";
+		char ascii = NAME[0];
+		length = NAME.size();
+		if (isupper(ascii)) {
+			std::cout << ascii << " = ascii\n";
+			clockWise = true;
+			type = ascii;	
+		}
+		else 
+		{
+			clockWise = true;
+			type = toupper(ascii);
+		}
+		if (type == 'X') express = true;
+	}
+
+};
 
 Map constuctMap(int n, Pos p)
 {
@@ -108,59 +147,177 @@ int train_crash(const std::string& track, const std::string& a_train, int a_trai
 
 	std::vector<Map> road;
 	Map map = Map(p, 6, link);
-	
+	std::vector<Station> stations;
+	std::vector<Train> trains;
 	road.push_back(map);
 	//p.x++;
 	std::vector<std::string> vTrack_show = vTrack;
 	//std::cout << map.c_d << "\n";
-	
+	int count = 0;
 	while (true)
 	{
+		count++;
 		map = constuctMap(map.c_d, p);
-		std::cout << "vTrack = " << vTrack[p.y][p.x] << "\n" << "x,y = " << p.x << " " << p.y << "\n";
-		std::cout << "map -  " << map.pos.x << " " << map.pos.y << "\n" ;
+		//std::cout << "vTrack = " << vTrack[p.y][p.x] << "\n" << "x,y = " << p.x << " " << p.y << "\n";
+		//std::cout << "map -  " << map.pos.x << " " << map.pos.y << "\n" ;
 		p = map.pos;
 		switch (vTrack[p.y][p.x])
 		{
 		case '-': {
-			map.c_d = 6;
+			//std::cout << map.ac_d << " map.ac_d\n";
+			switch (map.ac_d)
+			{
+			case 4: {map.c_d = 6; break; }
+			case 6: {map.c_d = 4; break; }
+			default: break;
+			}
+
 			break; }
 		case '|': {
-			map.c_d = 8;
+			switch (map.ac_d)
+			{
+			case 2: {map.c_d = 8; break; }
+			case 8: {map.c_d = 2; break; }
+			default: break;
+			}
 			break; }
-		case '/': { break; }
+		case '/': { 
+			//std::cout << "vTrack[p.y - 1][p.x + 1] " << vTrack[p.y - 1][p.x + 1] << "\n";
+			if ((map.ac_d == 7) || (map.ac_d == 8)) {
+				if ((vTrack[p.y - 1][p.x + 1] == '/') || (vTrack[p.y - 1][p.x + 1] == 'S')
+					|| (vTrack[p.y - 1][p.x + 1] == 'X')) map.c_d = 3;
+				if ((vTrack[p.y - 1][p.x] == '|') || (vTrack[p.y - 1][p.x] == '+')) map.c_d = 2;
+			}
+			if (vTrack[p.y][p.x - 1] == '-') map.c_d = 4;
+			if (vTrack[p.y][p.x +1 ] == '-') map.c_d = 6;
+			if ((map.ac_d == 2) || (map.ac_d == 3)) {
+				if ((vTrack[p.y + 1][p.x] == '|') || (vTrack[p.y + 1][p.x] == '+')) map.c_d = 8;
+				if ((vTrack[p.y + 1][p.x - 1] == '/') || (vTrack[p.y + 1][p.x - 1] == 'S')
+					|| (vTrack[p.y + 1][p.x - 1] == 'X')) map.c_d = 7;
+			}
+			if ((map.ac_d == 4) || (map.ac_d == 6)) {
+				if (vTrack[p.y - 1][p.x] == '|') map.c_d = 2;
+			}
+			break; }
 		case '\\': {
 			//std::cout << " WOW " << "\n";
-			if ((vTrack[p.y + 1][p.x] == '|') || (vTrack[p.y + 1][p.x] == '+')) map.c_d = 8;
-			if ((vTrack[p.y + 1][p.x + 1] == '\\') || (vTrack[p.y + 1][p.x + 1] == 'S') 
-				|| (vTrack[p.y + 1][p.x + 1] == 'X')) map.c_d = 9;
+			if ((map.ac_d == 4) || (map.ac_d == 3) || (map.ac_d == 2)) {
+				if ((vTrack[p.y + 1][p.x] == '|') || (vTrack[p.y + 1][p.x] == '+')) map.c_d = 8;
+				if ((vTrack[p.y + 1][p.x + 1] == '\\') || (vTrack[p.y + 1][p.x + 1] == 'S')
+					|| (vTrack[p.y + 1][p.x + 1] == 'X')) map.c_d = 9;
+			}
+			if ((map.ac_d == 6) || (map.ac_d == 7)) {
+				if ((vTrack[p.y - 1][p.x] == '|') || (vTrack[p.y - 1][p.x] == '+')) map.c_d = 2;
+				if ((vTrack[p.y - 1][p.x - 1] == '\\') || (vTrack[p.y - 1][p.x - 1] == 'S')
+					|| (vTrack[p.y - 1][p.x - 1] == 'X')) map.c_d = 1;
+			}
+			if ((map.ac_d == 8) || (map.ac_d == 9)) {
+				if ((vTrack[p.y - 1][p.x] == '|') || (vTrack[p.y - 1][p.x] == '+')) map.c_d = 2;
+				if ((vTrack[p.y - 1][p.x - 1] == '\\') || (vTrack[p.y - 1][p.x - 1] == 'S')
+					|| (vTrack[p.y - 1][p.x - 1] == 'X')) map.c_d = 1;
+			}
+			if ((map.ac_d == 1) || (map.ac_d == 2)) {
+				if (vTrack[p.y][p.x + 1] == '-') map.c_d = 6;
+				if (vTrack[p.y+1][p.x + 1] == '\\')  map.c_d = 9;
+				if (vTrack[p.y + 1][p.x] == '|')  map.c_d = 8;
+			}
 			break; }
-		case '+': { break; }
-		case 'X': { break; }
+		case '+': {
+			switch (map.ac_d)
+			{
+			case 2: {map.c_d = 8; break; }
+			case 8: {map.c_d = 2; break; }
+			case 4: {map.c_d = 6; break; }
+			case 6: {map.c_d = 4; break; }
+			default:
+				break;
+			}
+			//map.c_d = 8;
+			break; }
+		case 'X': { 
+			switch (map.ac_d)
+			{
+			case 1: {map.c_d = 9; break; }
+			case 9: {map.c_d = 1; break; }
+			case 3: {map.c_d = 7; break; }
+			case 7: {map.c_d = 3; break; }
+			default:
+				break;
+			}
+			break; }
 		case 'S': {
-			map.c_d = 8;
+			stations.push_back(Station(p, count));
+			switch (map.ac_d)
+			{
+			case 1: {map.c_d = 9; break; }
+			case 9: {map.c_d = 1; break; }
+			case 3: {map.c_d = 7; break; }
+			case 7: {map.c_d = 3; break; }
+			case 2: {map.c_d = 8; break; }
+			case 8: {map.c_d = 2; break; }
+			case 4: {map.c_d = 6; break; }
+			case 6: {map.c_d = 4; break; }
+			default:
+				break;
+			}
 			break; }
 		default:
 			break;
 		}
 		
-		std::cout << map.c_d << "\n";
+		//std::cout << map.c_d << "\n";
 		road.push_back(map);
-		vTrack_show[p.y][p.x] = '*';
-		
+		//vTrack_show[p.y][p.x] = '*';
+
+		//if (count == a_train_pos) vTrack_show[p.y][p.x] = 'A';
+		//if (count == b_train_pos) vTrack_show[p.y][p.x] = 'B';
+		if ((count > 2) && (p.x == pStart.x) && (p.y == pStart.y)) break;
 		//std::cout << p.x << "\n";
 		if (vTrack[p.y][p.x] != '-')
 		{
-			show(vTrack_show);
-			system("pause");
+			//std::cout << "count = " << count << "\n";
+			//show(vTrack_show);
+			//system("pause");
 		}
 	}
+	for (auto& i : stations) vTrack_show[i.pos.y][i.pos.x] = 'S';
+	trains.push_back(Train(a_train_pos, a_train));
+	trains.push_back(Train(b_train_pos, b_train));
+	for (auto& tr : trains)
+	{
+		tr.carriagePos.push_back(road[tr.roadPos].pos);
+		vTrack_show[tr.carriagePos[0].y][tr.carriagePos[0].x] = tr.type;
+		//std::cout << tr.length << "\n";
+		for (int i = 1; i < tr.length; i++)
+		{
+			tr.carriagePos.push_back(road[tr.roadPos+i].pos);
+			vTrack_show[tr.carriagePos[i].y][tr.carriagePos[i].x] = tolower(tr.type);
+		}
+	}
+
+	count = 0;
+	while (true)
+	{
+		for (auto& tr : trains)
+		{
+			tr.carriagePos[0] = getPosByLink(road[tr.roadPos].ac_d, tr.carriagePos[0]);
+			tr.roadPos--;
+			vTrack_show[tr.carriagePos[0].y][tr.carriagePos[0].x] = tr.type;
+		}
+		show(vTrack_show);
+		system("pause");
+		if (count == limit) return -1;
+	}
+	//road(a_train_pos)
+	return -2; // ERROR
+	std::cout << "WORK DONE!!!!\n";
+	show(vTrack_show);
+	system("pause");
+	//std::cout << road[1].pos.x << " " << road[1].pos.y << "\n";
 	
-	std::cout << road[1].pos.x << " " << road[1].pos.y << "\n";
-	
-	p = road[1].pos;
-	road.push_back(constuctMap(6, p));
-	std::cout << road[2].pos.x << " " << road[2].pos.y << "\n";
+	//p = road[1].pos;
+	//road.push_back(constuctMap(6, p));
+	//std::cout << road[2].pos.x << " " << road[2].pos.y << "\n";
 	//std::cout << getPosByLink(6, p).x << " " << getPosByLink(6, p).y;
 	switch (vTrack[p.y][p.x])
 	{
