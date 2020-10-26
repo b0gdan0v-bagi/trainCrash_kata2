@@ -219,9 +219,11 @@ int train_crash(const std::string& track, const std::string& a_train, int a_trai
 			if ((map.ac_d == 4) || (map.ac_d == 6)) {
 				if (vTrack[p.y - 1][p.x] == '|') map.c_d = 2;
 			}
-			if ((map.ac_d == 6) || (map.ac_d == 3))
+			if ((map.ac_d == 6) || (map.ac_d == 3)) {
 				if ((vTrack[p.y + 1][p.x - 1] == '/') || (vTrack[p.y + 1][p.x - 1] == 'X')
 					|| (vTrack[p.y + 1][p.x - 1] == 'S')) map.c_d = 7;
+				if (vTrack[p.y + 1][p.x] == '|') map.c_d = 8;
+			}
 			break; }
 		case '\\': {
 			//std::cout << " WOW " << "\n";
@@ -290,15 +292,15 @@ int train_crash(const std::string& track, const std::string& a_train, int a_trai
 		default:
 			break;
 		}
-		//vTrack_show[p.y][p.x] = '*';
-		//show(vTrack_show);
-		//std::cout << map.ac_d << " " << map.c_d << "\n";
-		//system("pause");
-		//std::cout << map.c_d << "\n";
+		vTrack_show[p.y][p.x] = '*';
+		show(vTrack_show);
+		std::cout << map.ac_d << " " << map.c_d << "\n";
+		system("pause");
+
 		road.push_back(map);
 
 		if ((count > 2) && (p.x == pStart.x) && (p.y == pStart.y)) break;
-		if (count > vTrack.size() * vTrack[0].size()) return -100500;
+		if (count > vTrack.size() * vTrack[0].size()) return -3; // loop error
 	}
 	road.pop_back();
 	//for (auto& i : stations) std::cout << i.roadPlace << "\n";
@@ -326,7 +328,16 @@ int train_crash(const std::string& track, const std::string& a_train, int a_trai
 	//show(vTrack_show);
 	//system("pause");
 	//std::cout << "START MOVING!\n";
+	for (auto& tr : trains)
+		for (int i = 0; i < tr.length; i++)
+			for (int j = 0; j < tr.length; j++)
+				if (i!=j) 
+					if (tr.carriagePos[i] == tr.carriagePos[j]) return 0;
+	for (int i = 0; i < trains[0].length; i++)
+		for (int j = 0; j < trains[1].length; j++)
+				if (trains[0].carriagePos[i] == trains[1].carriagePos[j]) return 0;
 	
+	//if (limit == 0) return 0; 
 	count = 0;
 	while (true)
 	{
@@ -337,7 +348,7 @@ int train_crash(const std::string& track, const std::string& a_train, int a_trai
 			for (int i = 0; i < trains[0].length; i++) if (tr.headPos == trains[0].carriagePos[i]) return count;
 			for (int i = 0; i < trains[1].length; i++) if (tr.headPos == trains[1].carriagePos[i]) return count;
 		}
-
+		if (limit == 0) return -1;
 		//moving
 		for (auto& tr : trains)
 		{
@@ -385,16 +396,11 @@ int train_crash(const std::string& track, const std::string& a_train, int a_trai
 			}
 			else tr.stopTimer--;
 		}
-
-		count++;
-		if (count == 515)
-		{
-			//show(vTrack_show);
-			//system("pause");
-		}
-		
-		
-		if (count == limit) return -1;
+		count++;	
+		show(vTrack_show);
+		std::cout << road[trains[0].roadPos].ac_d;
+		system("pause");
+		if (count == limit + 1) return -1;
 	}
 	return -2; // ERROR
 }
@@ -448,7 +454,23 @@ int main()
 		"|      / \\      |\n"
 		"|     /   \\     |\n"
 		"\\----/     \\----/\n";
+
+	const std::string r1 =
+		"/------\\               /--\\\n"
+		"|      |               |  |\n"
+		"|      \\---------------/  |\n"
+		"\\------\\               /--/\n"
+		"       |               |\n"
+		"       \\---------------/\n";
+	const std::string No_crash_0___Tricky =
+		"/-----\\   /-----\\   /-----\\   /-----\\\n"
+		"|      \\ /       \\ /       \\ /      |\n"
+		"|       X         X         X       |\n"
+		"|      / \\       / \\       / \\      |\n"
+		"\\-----/   \\-----/   \\-----/   \\-----/\n";
 	//std::cout << "\nANSWER = " << train_crash(example_track, "Aaaa", 147, "Bbbbbbbbbbb", 288, 1000) << "\n";
 	//std::cout << "\nANSWER = " << train_crash(s4, "aaaaaA", 10, "bbbbbB", 20, 100) << "\n";
-	std::cout << "\nANSWER = " << train_crash(Crashes__Tricky, "aaaaaA", 10, "bbbbbB", 20, 100) << "\n";
+	//std::cout << "\nANSWER = " << train_crash(Crashes__Tricky, "aaaaaA", 10, "bbbbbB", 20, 100) << "\n";
+	//std::cout << "\nANSWER = " << train_crash(r1, "aaaaaA", 10, "bbbbbB", 20, 100) << "\n";
+	std::cout << "\nANSWER = " << train_crash(No_crash_0___Tricky, "aaaA", 16, "bbbB", 5, 100) << "\n";
 }
