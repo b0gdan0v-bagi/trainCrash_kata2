@@ -8,7 +8,15 @@ struct Pos
 {
 	int x, y;
 	Pos(int X, int Y) : x(X), y(Y) {}
+	//Pos();
+	friend bool operator== (const Pos& p1, const Pos& p2);
 };
+
+bool operator== (const Pos& p1, const Pos& p2)
+{
+	return (p1.x == p2.x &&
+		p1.y == p2.y);
+}
 
 struct Map
 {
@@ -56,7 +64,9 @@ Pos getPosByLink(int n, Pos p)
 struct Train
 {
 	std::vector<Pos> carriagePos;
+	Pos headPos = { 0,0 };
 	int roadPos, length;
+	int stopTimer = { 0 };
 	char type;
 	bool express = { false };
 	bool clockWise;
@@ -64,10 +74,10 @@ struct Train
 	{
 		//std::cout << NAME.size() << " = size\n";
 		char ascii = NAME[0];
-		length = NAME.size();
+		length = NAME.size()-1;
 		if (isupper(ascii)) {
-			std::cout << ascii << " = ascii\n";
-			clockWise = true;
+			//std::cout << ascii << " = ascii\n";
+			clockWise = false;
 			type = ascii;	
 		}
 		else 
@@ -112,14 +122,25 @@ Pos startPos(std::vector<std::string> v)
 			if ((v[i][j] != ' ') && (v[i][j] != 'W')) return Pos(j, i);
 }
 
+int corrPos(int c, int const m)
+{
+	if (c > m) return c - m - 1;
+	if (c < 0) return m + c + 1;
+	return c;
+}
+
 int train_crash(const std::string& track, const std::string& a_train, int a_train_pos, const std::string& b_train, int b_train_pos, int limit)
 {
     std::string to;
 	std::vector<std::string> vTrack;
+	std::cout << "A " << a_train << " " << a_train_pos << "\n";
+	std::cout << "B " << b_train << " " << b_train_pos << "\n";
+	std::cout << "limit = " << limit << "\n";
     std::stringstream ss(track);
 	int maxWidthSize = 0;
     while (std::getline(ss, to, '\n'))
     {
+		std::cout << to << "\n";
 		to.insert(0, "W");
 		vTrack.push_back(to);
 		if (maxWidthSize < to.size())maxWidthSize = to.size();
@@ -198,13 +219,16 @@ int train_crash(const std::string& track, const std::string& a_train, int a_trai
 			if ((map.ac_d == 4) || (map.ac_d == 6)) {
 				if (vTrack[p.y - 1][p.x] == '|') map.c_d = 2;
 			}
+			if ((map.ac_d == 6) || (map.ac_d == 3))
+				if ((vTrack[p.y + 1][p.x - 1] == '/') || (vTrack[p.y + 1][p.x - 1] == 'X')
+					|| (vTrack[p.y + 1][p.x - 1] == 'S')) map.c_d = 7;
 			break; }
 		case '\\': {
 			//std::cout << " WOW " << "\n";
 			if ((map.ac_d == 4) || (map.ac_d == 3) || (map.ac_d == 2)) {
 				if ((vTrack[p.y + 1][p.x] == '|') || (vTrack[p.y + 1][p.x] == '+')) map.c_d = 8;
 				if ((vTrack[p.y + 1][p.x + 1] == '\\') || (vTrack[p.y + 1][p.x + 1] == 'S')
-					|| (vTrack[p.y + 1][p.x + 1] == 'X')) map.c_d = 9;
+					|| (vTrack[p.y + 1][p.x + 1] == 'X') ) map.c_d = 9;
 			}
 			if ((map.ac_d == 6) || (map.ac_d == 7)) {
 				if ((vTrack[p.y - 1][p.x] == '|') || (vTrack[p.y - 1][p.x] == '+')) map.c_d = 2;
@@ -212,13 +236,15 @@ int train_crash(const std::string& track, const std::string& a_train, int a_trai
 					|| (vTrack[p.y - 1][p.x - 1] == 'X')) map.c_d = 1;
 			}
 			if ((map.ac_d == 8) || (map.ac_d == 9)) {
+				if (vTrack[p.y][p.x - 1] == '-') map.c_d = 4;
 				if ((vTrack[p.y - 1][p.x] == '|') || (vTrack[p.y - 1][p.x] == '+')) map.c_d = 2;
 				if ((vTrack[p.y - 1][p.x - 1] == '\\') || (vTrack[p.y - 1][p.x - 1] == 'S')
 					|| (vTrack[p.y - 1][p.x - 1] == 'X')) map.c_d = 1;
 			}
 			if ((map.ac_d == 1) || (map.ac_d == 2)) {
 				if (vTrack[p.y][p.x + 1] == '-') map.c_d = 6;
-				if (vTrack[p.y+1][p.x + 1] == '\\')  map.c_d = 9;
+				if ((vTrack[p.y+1][p.x + 1] == '\\') || (vTrack[p.y + 1][p.x + 1] == 'X') 
+					|| (vTrack[p.y + 1][p.x + 1] == 'S'))  map.c_d = 9;
 				if (vTrack[p.y + 1][p.x] == '|')  map.c_d = 8;
 			}
 			break; }
@@ -264,70 +290,113 @@ int train_crash(const std::string& track, const std::string& a_train, int a_trai
 		default:
 			break;
 		}
-		
+		//vTrack_show[p.y][p.x] = '*';
+		//show(vTrack_show);
+		//std::cout << map.ac_d << " " << map.c_d << "\n";
+		//system("pause");
 		//std::cout << map.c_d << "\n";
 		road.push_back(map);
-		//vTrack_show[p.y][p.x] = '*';
 
-		//if (count == a_train_pos) vTrack_show[p.y][p.x] = 'A';
-		//if (count == b_train_pos) vTrack_show[p.y][p.x] = 'B';
 		if ((count > 2) && (p.x == pStart.x) && (p.y == pStart.y)) break;
-		//std::cout << p.x << "\n";
-		if (vTrack[p.y][p.x] != '-')
-		{
-			//std::cout << "count = " << count << "\n";
-			//show(vTrack_show);
-			//system("pause");
-		}
+		if (count > vTrack.size() * vTrack[0].size()) return -100500;
 	}
+	road.pop_back();
+	//for (auto& i : stations) std::cout << i.roadPlace << "\n";
+	int const roadMax = road.size() - 1;
+	int curRoadPos;
+
 	for (auto& i : stations) vTrack_show[i.pos.y][i.pos.x] = 'S';
 	trains.push_back(Train(a_train_pos, a_train));
+	//trains.push_back(Train(1, a_train));
 	trains.push_back(Train(b_train_pos, b_train));
 	for (auto& tr : trains)
 	{
-		tr.carriagePos.push_back(road[tr.roadPos].pos);
-		vTrack_show[tr.carriagePos[0].y][tr.carriagePos[0].x] = tr.type;
-		//std::cout << tr.length << "\n";
-		for (int i = 1; i < tr.length; i++)
+		tr.headPos = road[corrPos(tr.roadPos, roadMax)].pos;
+		//tr.carriagePos.push_back(road[tr.roadPos].pos);
+		vTrack_show[tr.headPos.y][tr.headPos.x] = tr.type;
+		for (int i = 0; i < tr.length; i++)
 		{
-			tr.carriagePos.push_back(road[tr.roadPos+i].pos);
+			if (!tr.clockWise) tr.carriagePos.push_back(road[corrPos(tr.roadPos + i + 1, roadMax)].pos);
+			else tr.carriagePos.push_back(road[corrPos(tr.roadPos - i - 1, roadMax)].pos);
 			vTrack_show[tr.carriagePos[i].y][tr.carriagePos[i].x] = tolower(tr.type);
+			//std::cout << tolower(tr.type) << " " << tr.carriagePos[i].y << " " << tr.carriagePos[i].x << "\n";
 		}
+		for (auto& i : stations) if (tr.roadPos == i.roadPlace) tr.stopTimer = 1;
 	}
-
+	//show(vTrack_show);
+	//system("pause");
+	//std::cout << "START MOVING!\n";
+	
 	count = 0;
 	while (true)
 	{
+		//collission
+		if (trains[0].headPos == trains[1].headPos) return count;
 		for (auto& tr : trains)
 		{
-			tr.carriagePos[0] = getPosByLink(road[tr.roadPos].ac_d, tr.carriagePos[0]);
-			tr.roadPos--;
-			vTrack_show[tr.carriagePos[0].y][tr.carriagePos[0].x] = tr.type;
+			for (int i = 0; i < trains[0].length; i++) if (tr.headPos == trains[0].carriagePos[i]) return count;
+			for (int i = 0; i < trains[1].length; i++) if (tr.headPos == trains[1].carriagePos[i]) return count;
 		}
-		show(vTrack_show);
-		system("pause");
+
+		//moving
+		for (auto& tr : trains)
+		{
+			if (tr.express) tr.stopTimer = 0;
+			if (tr.stopTimer == 0)
+			{
+				if (!tr.clockWise) {
+					tr.headPos = getPosByLink(road[corrPos(tr.roadPos, roadMax)].ac_d, tr.headPos);
+					//tr.carriagePos[0] = getPosByLink(road[tr.roadPos].ac_d, tr.carriagePos[0]);
+
+					vTrack_show[tr.headPos.y][tr.headPos.x] = tr.type;
+					//std::cout << tr.type << " " << tr.headPos.y << " " << tr.headPos.x << "\n";
+					//std::cout << corrPos(tr.roadPos, roadMax) << " tr.roadPosHEAD\n";
+					for (int i = 0; i < tr.length; i++)
+					{
+
+						tr.carriagePos[i] = getPosByLink(road[corrPos(tr.roadPos + i + 1, roadMax)].ac_d, tr.carriagePos[i]);
+						vTrack_show[tr.carriagePos[i].y][tr.carriagePos[i].x] = tolower(tr.type);
+						//std::cout << corrPos(tr.roadPos + i + 1, roadMax) << " tr.roadPos+i+1\n";
+						//std::cout << tolower(tr.type) << " " << tr.carriagePos[i].y << " " << tr.carriagePos[i].x << "\n";
+					}
+					Pos t = getPosByLink(road[corrPos(tr.roadPos + tr.length + 1, roadMax)].ac_d, road[corrPos(tr.roadPos + tr.length + 1, roadMax)].pos);
+					vTrack_show[t.y][t.x] = '*';
+					tr.roadPos--;
+					if (tr.roadPos < 0) tr.roadPos = roadMax;
+					for (auto& i : stations) if (tr.roadPos == i.roadPlace) tr.stopTimer = tr.length;
+				}
+				else
+				{
+					tr.headPos = getPosByLink(road[corrPos(tr.roadPos, roadMax)].c_d, tr.headPos);
+					vTrack_show[tr.headPos.y][tr.headPos.x] = tr.type;
+					for (int i = 0; i < tr.length; i++)
+					{
+						tr.carriagePos[i] = getPosByLink(road[corrPos(tr.roadPos - i - 1, roadMax)].c_d, tr.carriagePos[i]);
+						vTrack_show[tr.carriagePos[i].y][tr.carriagePos[i].x] = tolower(tr.type);
+						//std::cout << corrPos(tr.roadPos + i + 1, roadMax) << " tr.roadPos+i+1\n";
+						//std::cout << tolower(tr.type) << " " << tr.carriagePos[i].y << " " << tr.carriagePos[i].x << "\n";
+					}
+					Pos t = getPosByLink(road[corrPos(tr.roadPos - tr.length - 1, roadMax)].c_d, road[corrPos(tr.roadPos - tr.length - 1, roadMax)].pos);
+					vTrack_show[t.y][t.x] = '*';
+					tr.roadPos++;
+					if (tr.roadPos > roadMax) tr.roadPos = 0;
+					for (auto& i : stations) if (tr.roadPos == i.roadPlace) tr.stopTimer = tr.length;
+				}
+			}
+			else tr.stopTimer--;
+		}
+
+		count++;
+		if (count == 515)
+		{
+			//show(vTrack_show);
+			//system("pause");
+		}
+		
+		
 		if (count == limit) return -1;
 	}
-	//road(a_train_pos)
 	return -2; // ERROR
-	std::cout << "WORK DONE!!!!\n";
-	show(vTrack_show);
-	system("pause");
-	//std::cout << road[1].pos.x << " " << road[1].pos.y << "\n";
-	
-	//p = road[1].pos;
-	//road.push_back(constuctMap(6, p));
-	//std::cout << road[2].pos.x << " " << road[2].pos.y << "\n";
-	//std::cout << getPosByLink(6, p).x << " " << getPosByLink(6, p).y;
-	switch (vTrack[p.y][p.x])
-	{
-	case '-': {std::cout << "\nWOW"; break;
-	}
-	default:
-		break;
-	}
-
-    return 42;
 }
 
 int main()
@@ -360,5 +429,26 @@ int main()
 		"              |                            |               \n"
 		"              \\----------------------------/ \n";
 
-	train_crash(example_track, "Aaaa", 147, "Bbbbbbbbbbb", 288, 1000);
+	const std::string s4 =
+		"/-------\\\n"
+		"|       |\n"
+		"|       |\n"
+		"|       |\n"
+		"\\-------S--------\\ \n"
+		"        |        | \n"
+		"        |        | \n"
+		"        |        | \n"
+		"        \\--------/\n";
+
+	const std::string Crashes__Tricky =
+		"/----\\     /----\\\n"
+		"|     \\   /     |\n"
+		"|      \\ /      |\n"
+		"|       S       |\n"
+		"|      / \\      |\n"
+		"|     /   \\     |\n"
+		"\\----/     \\----/\n";
+	//std::cout << "\nANSWER = " << train_crash(example_track, "Aaaa", 147, "Bbbbbbbbbbb", 288, 1000) << "\n";
+	//std::cout << "\nANSWER = " << train_crash(s4, "aaaaaA", 10, "bbbbbB", 20, 100) << "\n";
+	std::cout << "\nANSWER = " << train_crash(Crashes__Tricky, "aaaaaA", 10, "bbbbbB", 20, 100) << "\n";
 }
